@@ -3,7 +3,9 @@ import json
 import pandas as pd
 import numpy as np
 import sys
-from pathlib import Path
+# from pathlib import Path
+from pyspark.sql import SparkSession
+from pyspark import SparkContext, SparkConf
 
 WINDSPEED = 0.277778 # 1kph * 0.277778m/s 
 
@@ -16,10 +18,17 @@ def main():
     numpy_array = get_data_array(forecast_data)
     # print(numpy_array)
     df = get_dataframe(numpy_array)
+    print(df.dtypes)
     df = create_wind_ms_columns(df)
+    print(df.dtypes)
     fp = sys.argv[1]
-    setup_path(fp)
-    df.to_csv(fp,mode='w',index=False)
+    # setup_path(fp)
+    # df.to_csv(fp,mode='w',index=False)
+    # Turn the df into an RDD
+    rdd = get_hive_df(df)
+    # Save as a single csv file.
+    rdd.coalesce(1).write.format('com.databricks.spark.csv').option('header','true').mode("overwrite").save(fp)
+
     sys.exit(0)
 
 def get_data_array(forecast_data):
@@ -37,8 +46,8 @@ def get_dataframe(data_array):
     
 def create_wind_ms_columns(df):
     # Transform df to have meters/second for ease of calculations later.
-    df['wind_ms'] = round(df['wind_kph'] * WINDSPEED,2) 
-    df['gust_ms'] = round(df['gust_kph'] * WINDSPEED,2)
+    df['wind_ms'] = df['wind_kph'] * WINDSPEED
+    df['gust_ms'] = df['gust_kph'] * WINDSPEED
     return df
  
 def get_forecast(config):
@@ -49,14 +58,18 @@ def check_success(request):
 
 def get_config():
     config_file = dict({})
-    with open("../data/config.json") as f:
+    with open("./data/config.json") as f:
         config_file = json.load(f)
     return config_file
 
-def setup_path(path):
-    path = Path(path)
-    path.parent.mkdir(parents=True,exist_ok=True)
+# def setup_path(path):
+#    path = Path(path)
+#     path.parent.mkdir(parents=True,exist_ok=True)
 
+def get_hive_df(df):
+    sc = SparkSession.builder.master('local[1]').appName('Hive DF').getOrCreate()
+    new_df = sc.createDataFrame(data=df)
+    return new_df
 
 if __name__ == "__main__":
     main()
