@@ -27,6 +27,7 @@ def main():
     # Turn the df into an RDD
     rdd = get_hive_df(df)
     # Save as a single csv file.
+    rdd.show()
     rdd.coalesce(1).write.format('com.databricks.spark.csv').option('header','true').mode("overwrite").save(fp)
 
     sys.exit(0)
@@ -48,6 +49,10 @@ def create_wind_ms_columns(df):
     # Transform df to have meters/second for ease of calculations later.
     df['wind_ms'] = df['wind_kph'] * WINDSPEED
     df['gust_ms'] = df['gust_kph'] * WINDSPEED
+    # df['wind_ms'] = df['wind_ms'].astype(float)
+    # df['gust_ms'] = df['gust_ms'].astype(float)
+    df['wind_ms'] = df['wind_ms'].apply(lambda x: round(x,2))
+    df['gust_ms'] = df['gust_ms'].apply(lambda x: round(x,2))
     return df
  
 def get_forecast(config):
