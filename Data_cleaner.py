@@ -205,4 +205,4 @@ values={"tempt_c": tempt_c_avg_flt, "wind_direction":wind_direction_avg_flt, "wi
 #Fill Null values inside Department column with the word 'Generalist'
 #df3.fillna(value=values).show()
 #df5.fillna(value=values).show()
-df3.coalesce(1).write.mode('overwrite').options(header='True', delimiter=';').csv(sys.argv[2])
+df5.fillna(value=values).coalesce(1).write.mode('overwrite').options(header='True', delimiter=';').csv(sys.argv[2])

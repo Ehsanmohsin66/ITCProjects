@@ -204,4 +204,4 @@ values={"tempt_c": tempt_c_avg_flt, "wind_direction":wind_direction_avg_flt, "wi
 #df3.fillna(value=values).show()
 #df5.fillna(value=values).show()
 
-df5.coalesce(1).write.mode('overwrite').options(header='True', delimiter=';').csv("C:\\Users\\etowe\\Downloads\\2017-2020_wind_prediction_data\\2017-2020_cleaned")
+df5.fillna(value=values).coalesce(1).write.mode('overwrite').options(header='True', delimiter=';').csv("C:\\Users\\etowe\\Downloads\\2017-2020_wind_prediction_data\\2017-2020_cleaned")
