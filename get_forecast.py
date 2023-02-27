@@ -7,8 +7,9 @@ import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from pyspark.sql.types import StringType, FloatType
-from pyspark import SparkContext, SparkConf, HiveContext
-
+from pyspark import SparkContext, SparkConf
+from subprocess import Popen, PIPE
+from datetime import datetime
 WINDSPEED = 0.277778 # 1kph * 0.277778m/s 
 
 def main():
@@ -30,20 +31,22 @@ def get_data_array(forecast_data):
     for i,v in enumerate(forecast_data.json()['forecast']['forecastday']):
         hour_list = forecast_data.json()['forecast']['forecastday'][i]['hour'] # Each day is here
         for k in hour_list:
-            hours_array.extend([[k['time'], k['wind_kph'], k['wind_degree'], k['wind_dir'], k['gust_kph']]])
+            print(k)
+            hours_array.extend([[k['time'], k['wind_kph'], k['wind_degree'], k['temp_c']]])
     return hours_array
 
 def get_dataframe(data_array):
     # Create a dataframe
     return pd.DataFrame(data_array,
-    columns= ['datetime','wind_kph','wind_degree','wind_dir','gust_kph'])
+    columns= ['datetime','wind_kph','wa_c','tempt_c'])
     
 def append_and_fix_columns(df):
     # Transform df to have meters/second for ease of calculations later.
-    df['wind_ms'] = df['wind_kph'] * WINDSPEED
-    df['gust_ms'] = df['gust_kph'] * WINDSPEED
-    df['wind_ms'] = df['wind_ms'].apply(lambda x: round(x,2))
-    df['gust_ms'] = df['gust_ms'].apply(lambda x: round(x,2))
+    df['wind_speed'] = df['wind_kph'] * WINDSPEED
+    df['wind_speed'] = df['wind_speed'].apply(lambda x: round(x,2))
+    df = df.drop("wind_kph", axis=1)
+    df['wa_c'] = df['wa_c'].apply(lambda x: float(x))
+    print(df)
     return df
  
 def get_forecast(config):
@@ -59,10 +62,15 @@ def get_config():
     return config_file
 
 def send_to_hive(df):
-    sc = SparkSession.builder.appName('Hive DF').getOrCreate()
-    hc = HiveContext(sc)
-    rdd = hc.createDataFrame(df)
-    rdd.write.mode("overwrite").format("hive").saveAsTable("windpredictionproject_jan23.weather_data")
+    sc = SparkSession.builder.appName('HDFS Importer').getOrCreate()
+    rdd = sc.createDataFrame(df)
+    fname = f"WEATHER-{datetime.now()}.csv"
+    fpath = sys.argv[1]
+    rdd.write.save(path=f"{fpath}/{fname}", format="csv", mode="overwrite")
+
+    # Hive implementation?
+
+    # rdd.write.mode("overwrite").format("hive").saveAsTable("windpredictionproject_jan23.weather_data")
 
 if __name__ == "__main__":
     main()
