@@ -1,4 +1,4 @@
-from kafka import KafkaConsumer
+#from kafka import *
 import json
 import datetime as dt
 import pyspark as ps
@@ -23,23 +23,22 @@ import os
 #     value_deserializer = lambda x: json.loads(x.decode('UTF-8'))
 # )
 
-spark = SparkSession.builder.appName("WPP_Kafka_Streamer").master("local[*]").getOrCreate()
-spark.sparkContext.setLogLevel("ERROR")
+spark = SparkSession.builder.config("spark.jars","C:\\Users\\ehsan\\OneDrive\\Desktop\\Wind_Project\\spark-sql-kafka-0-10_2.12-2.4.7.jar,C:\\Users\\ehsan\\OneDrive\\Desktop\\Wind_Project\\jar_files_2\\kafka-clients-0.8.2.1.jar").\
+appName("WPP_Kafka_Streamer").master("local[*]").getOrCreate()
+#spark.sparkContext.setLogLevel("ERROR")
 
-TOPIC = "windpowerproject"
+TOPIC = "ruipali"#"windpowerproject"
 
 # allow for testing local vs non local
-BOOSTRAP_SERVER = "localhost:9092" if sys.argv[1] == "local" else [
-    "ip-172-31-13-101.eu-west-2.compute.internal:9092",
-    "ip-172-31-3-80.eu-west-2.compute.internal:9092",
-    "ip-172-31-5-217.eu-west-2.compute.internal:9092",
-    "ip-172-31-9-237.eu-west-2.compute.internal:9092"
-    ]
+BOOSTRAP_SERVER = "ip-172-31-13-101.eu-west-2.compute.internal:9092"
+#"localhost:9092"
+
 
 print(BOOSTRAP_SERVER)
 
-df = spark.readStream.format("kafka").option("kafka.boostrap.servers", BOOSTRAP_SERVER).option(
-    "subscribe", TOPIC).load()
+df = spark.read.format("kafka").option("kafka.boostrap.servers", BOOSTRAP_SERVER).\
+option("subscribe", TOPIC).option("startingOffsets", "earliest") \
+.option("endingOffsets", "latest").load()
 
 new_df = df.selectExpr("CAST(value AS STRING)","timestamp")
 
