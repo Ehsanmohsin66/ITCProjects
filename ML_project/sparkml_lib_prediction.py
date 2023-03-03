@@ -28,20 +28,21 @@ if __name__ == '__main__':
 
 
     #for testing local vs non local
-    BOOSTRAP_SERVER = "ip-172-31-13-101.eu-west-2.compute.internal:9092";
+    BOOSTRAP_SERVER = "ip-172-31-13-101.eu-west-2.compute.internal:9092"
     df = spark.read.format("kafka").option("kafka.bootstrap.servers", BOOSTRAP_SERVER).\
-    option("subscribe", "wpp_kafka_testdata").option("startingOffsets", "earliest")\
+    option("subscribe", TOPIC).option("startingOffsets", "earliest")\
     .option("endingOffsets", "latest").load()
 
     new_df = df.selectExpr("CAST(value AS STRING)")
+    i=0
 
-    for rec in new_df:
-        str=rec._1
-        json_data=json.loads()
-        pred_data_inp={"feature1":json_data.["datetime"],"feature2":json_data.["wind_dir"]}
-        Vectors.dense(pred_data_inp["feature1"])]).toDF(['label', 'features'])
-        model_loaded=RandomForestRegressor().load("ml_model")
-        pred=model_loaded.transform(testData)
+    str=new_df.collect()[-1][0]
+    json_data=json.loads(str)
+    pred_data_inp={"feature1":json_data["datetime"], "feature2":json_data["tempt_c"],"feature3":json_data["wa_c"], "feature4":json_data["tempt_c"]}
+
+    testData=Vectors.dense(pred_data_inp["feature1"],pred_data_inp["feature2"],pred_data_inp["feature3"],pred_data_inp["feature4"]).toDF(['label', 'features'])
+    model_loaded=RandomForestRegressor().load("ml_model")
+    pred=model_loaded.transform(testData)
 
 
 
