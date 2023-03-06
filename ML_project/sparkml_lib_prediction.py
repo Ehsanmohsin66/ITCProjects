@@ -35,14 +35,23 @@ if __name__ == '__main__':
 
     new_df = df.selectExpr("CAST(value AS STRING)")
     i=0
+    cont=df.count()
+    model_loaded = RandomForestRegressor().load("ml_model")
+    connection = happybase.Connection('ip-172-31-3-80.eu-west-2.compute.internal', table_prefix='ml_windpowerpred')
 
-    str=new_df.collect()[-1][0]
-    json_data=json.loads(str)
-    pred_data_inp={"feature1":json_data["datetime"], "feature2":json_data["tempt_c"],"feature3":json_data["wa_c"], "feature4":json_data["tempt_c"]}
+    for i in range(cont-20,cont):
+        str=new_df.collect()[i][0]
+        json_data=json.loads(str)
+        pred_data_inp={"feature1":json_data["datetime"], "feature2":json_data["tempt_c"],"feature3":json_data["wa_c"], "feature4":json_data["tempt_c"]}
+        pred_data_inp_1=pred_data_inp.withColumn("feature1", date_format(col("feature1"), "D"))\
+        .withColumn("feature1",col("feature1").cast(IntegerType()))
+        testData=[0,Vectors.dense(pred_data_inp_1["feature1"],pred_data_inp_1["feature2"],pred_data_inp_1["feature3"],pred_data_inp_1["feature4"])].toDF(['label', 'features'])
+        pred=model_loaded.transform(testData)
+        pred_power=pred.prediction
+        date_time=json_data["datetime"]
+        df_forhbase=[date_time,pred_power].toDF("datetime","active_power")
+        df_forhbase.show()
 
-    testData=Vectors.dense(pred_data_inp["feature1"],pred_data_inp["feature2"],pred_data_inp["feature3"],pred_data_inp["feature4"]).toDF(['label', 'features'])
-    model_loaded=RandomForestRegressor().load("ml_model")
-    pred=model_loaded.transform(testData)
 
 
 
