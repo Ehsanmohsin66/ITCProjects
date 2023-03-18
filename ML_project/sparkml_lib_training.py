@@ -13,21 +13,20 @@ from pyspark.sql.functions import col
 from pyspark.sql.types import IntegerType
 
 def transData(data):
-    return data.rdd.map(lambda r: [r[4], Vectors.dense(r[0:4])]). \
-        toDF(['label', 'features'])
+    return data.rdd.map(lambda r: [r[4], Vectors.dense(r[0:4])]).toDF(['label', 'features'])
 
 if __name__ == '__main__':
     s_logger = logging.getLogger('py4j.java_gateway')
     s_logger.setLevel(logging.ERROR)
     spark = SparkSession.builder.appName(
-        "Spark_ML_train_model").getOrCreate()  # ("local[*]", "FirstDemo")
+        "Spark_ML_train_model").enableHiveSupport().getOrCreate()  # ("local[*]", "FirstDemo")
     spark.sparkContext.setLogLevel("ERROR")
 
     tables = spark.sql("show tables").show()
-    data1=spark.sql("Select  datetime as feature1,temp_c as feature2,wind_dir as feature3,\
-    wind_speed_ms as feature4,\
-    case when active_power < 0 then 0 else active_power end as label1,reactive_power as label2 \
-    from windpredictionproject_jan23.record_table where active_power is NOT NULL")
+    data1=spark.sql("Select  date_time as feature1,ot_avg as feature2,wa_c_avg as feature3,\
+    wind_speed as feature4,\
+    case when p_avg < 0 then 0 else p_avg end as label1,q_avg as label2 \
+    from windpredictionproject_jan23.fact_truth_table where p_avg is NOT NULL")
     data_1=data1.withColumn("feature1", date_format(col("feature1"), "D"))\
         .withColumn("feature1",col("feature1").cast(IntegerType()))
     data_1.printSchema()
